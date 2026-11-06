@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blackjack vs Gemini</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b130e;
+            color: #e2e8f0;
+            user-select: none;
+            overflow-x: hidden;
+        }
+
+        .cinzel {
+            font-family: 'Cinzel', serif;
+        }
+
+        /* Felt table background texture */
+        .table-felt {
+            background: radial-gradient(circle at center, #1b4d2e 0%, #0f331d 70%, #081e11 100%);
+            box-shadow: inset 0 0 100px rgba(0,0,0,0.8);
+        }
+
+        /* Card styles & flip animations */
+        .card-container {
+            perspective: 1000px;
+            width: 80px;
+            height: 116px;
+        }
+
+        @media (min-width: 640px) {
+            .card-container {
+                width: 96px;
+                height: 140px;
+            }
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            border-radius: 8px;
+        }
+
+        .card-inner.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 6px;
+            box-sizing: border-box;
+        }
+
+        .card-front {
+            background-color: #ffffff;
+            color: #1a202c;
+            border: 1px solid #cbd5e1;
+        }
+
+        .card-back {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border: 2px solid #fbbf24;
+            transform: rotateY(180deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card-pattern {
+            width: 85%;
+            height: 85%;
+            border: 1px dashed rgba(251, 191, 36, 0.4);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle, rgba(251,191,36,0.15) 0%, transparent 70%);
+        }
+
+        /* Deal Animation */
+        @keyframes dealCard {
+            0% {
+                opacity: 0;
+                transform: translateY(-200px) scale(0.5) rotate(-15deg);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1) rotate(0deg);
+            }
+        }
+
+        .animate-deal {
+            animation: dealCard 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        /* Chip styling */
+        .chip {
+            border-radius: 50%;
+            border: 4px dashed rgba(255, 255, 255, 0.6);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.4), inset 0 2px 4px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.4);
+            transition: all 0.2s ease;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .chip:hover:not(:disabled) {
+            transform: translateY(-4px) scale(1.05);
+            box-shadow: 0 8px 12px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,255,255,0.4);
+        }
+
+        .chip:active:not(:disabled) {
+            transform: translateY(0) scale(0.98);
+        }
+
+        /* Speech Bubble Pointer */
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 10px 10px 0;
+            border-style: solid;
+            border-color: rgba(15, 23, 42, 0.95) transparent;
+            display: block;
+            width: 0;
+        }
+
+        /* Custom Scrollbar for stats drawer */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.2);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between items-center p-2 sm:p-4">
+
+    <!-- Header / Navbar -->
+    <header class="w-full max-w-5xl flex justify-between items-center bg-slate-900/80 backdrop-blur border border-slate-800 px-4 py-3 rounded-2xl mb-2 z-10 shadow-lg">
+        <div class="flex items-center space-x-3">
+            <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center text-slate-950 font-bold text-xl shadow-md shadow-amber-500/20">
+                <i class="fa-solid fa-gem"></i>
+            </div>
+            <div>
+                <h1 class="cinzel text-lg sm:text-xl font-bold tracking-wider text-amber-400">GEMINI CASINO</h1>
+                <p class="text-xs text-slate-400">High Stakes Blackjack</p>
+            </div>
+        </div>
+
+        <!-- Controls / Info -->
+        <div class="flex items-center space-x-2 sm:space-x-4">
+            <button id="soundToggle" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="Toggle Sound">
+                <i class="fa-solid fa-volume-high text-sm sm:text-base" id="soundIcon"></i>
+            </button>
+            <button id="statsBtn" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs sm:text-sm font-medium transition flex items-center space-x-1.5">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>Stats</span>
+            </button>
+            <button id="resetBankBtn" class="px-3 py-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/60 border border-red-800/50 text-red-300 text-xs sm:text-sm font-medium transition" title="Reset Bankroll if broke">
+                <i class="fa-solid fa-rotate-right"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Game Felt Area -->
+    <main class="w-full max-w-5xl flex-1 table-felt rounded-3xl border-4 border-amber-900/40 p-4 sm:p-6 flex flex-col justify-between relative overflow-hidden shadow-2xl min-h-[580px]">
+        
+        <!-- Background Felt Emblem -->
+        <div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-5">
+            <i class="fa-solid fa-gem text-[250px] text-amber-400"></i>
+        </div>
+
+        <!-- DEALER SECTION -->
+        <div class="w-full flex flex-col items-center relative z-10">
+            <!-- Dealer AI Avatar & Speech Bubble -->
+            <div class="relative flex flex-col items-center mb-2">
+                <div class="speech-bubble relative bg-slate-900/95 border border-amber-500/30 text-slate-200 px-4 py-2 rounded-2xl text-xs sm:text-sm max-w-xs sm:max-w-md text-center shadow-xl mb-3 backdrop-blur transition-all duration-300 min-h-[40px] flex items-center justify-center">
+                    <p id="dealerCommentary" class="font-medium">Welcome to the high-stakes table! Place your bet to begin.</p>
+                </div>
+                
+                <div class="flex items-center space-x-2">
+                    <div class="w-10 h-10 rounded-full bg-slate-900 border-2 border-amber-400 flex items-center justify-center text-amber-400 shadow-md">
+                        <i class="fa-solid fa-robot text-lg"></i>
+                    </div>
+                    <div>
+                        <span class="text-xs uppercase tracking-wider font-semibold text-slate-400 block">Dealer</span>
+                        <span class="text-sm font-bold text-slate-200">Gemini AI</span>
+                    </div>
+                    <div id="dealerScoreBadge" class="hidden ml-2 px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-amber-400 text-xs font-bold">
+                        Score: <span id="dealerScore">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dealer Cards Container -->
+            <div id="dealerCards" class="flex justify-center -space-x-8 sm:-space-x-10 min-h-[120px] sm:min-h-[144px] pt-2">
+                <!-- Cards dynamically injected here -->
+            </div>
+        </div>
+
+        <!-- CENTER TABLE / ANNOUNCEMENT / BETTING POT -->
+        <div class="my-4 flex flex-col items-center justify-center relative z-10">
+            <!-- Game Result Display Overlay -->
+            <div id="resultBanner" class="hidden transform transition-all duration-300 scale-95 opacity-0">
+                <div id="resultBadge" class="px-6 py-2 rounded-2xl font-black text-lg sm:text-2xl tracking-widest uppercase shadow-2xl border flex items-center space-x-2">
+                    <span id="resultText">PLAYER WINS</span>
+                </div>
+            </div>
+
+            <!-- Active Bet Display -->
+            <div class="mt-2 flex items-center space-x-2 bg-slate-950/60 backdrop-blur px-4 py-1.5 rounded-full border border-amber-500/20 shadow-inner">
+                <span class="text-xs font-semibold text-slate-400">CURRENT BET:</span>
+                <span id="currentBetDisplay" class="text-sm font-bold text-amber-400">$0</span>
+            </div>
+        </div>
+
+        <!-- PLAYER SECTION -->
+        <div class="w-full flex flex-col items-center relative z-10">
+            <!-- Player Cards Containers (Supports Split Hands) -->
+            <div id="handsWrapper" class="w-full flex justify-center items-start space-x-4 sm:space-x-8 min-h-[130px] sm:min-h-[150px] mb-2">
+                <!-- Primary Hand -->
+                <div id="hand-0" class="flex flex-col items-center p-2 rounded-xl transition-all duration-300 border border-transparent">
+                    <div class="flex items-center space-x-2 mb-1">
+                        <span class="text-xs font-semibold text-slate-300">YOUR HAND</span>
+                        <span id="playerScoreBadge-0" class="hidden px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-amber-400 text-xs font-bold">
+                            <span id="playerScore-0">0</span>
+                        </span>
+                    </div>
+                    <div id="playerCards-0" class="flex justify-center -space-x-8 sm:-space-x-10">
+                        <!-- Cards injected here -->
+                    </div>
+                </div>
+
+                <!-- Secondary Split Hand (Initially Hidden) -->
+                <div id="hand-1" class="hidden flex flex-col items-center p-2 rounded-xl transition-all duration-300 border border-transparent">
+                    <div class="flex items-center space-x-2 mb-1">
+                        <span class="text-xs font-semibold text-slate-300">SPLIT HAND</span>
+                        <span id="playerScoreBadge-1" class="px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-amber-400 text-xs font-bold">
+                            <span id="playerScore-1">0</span>
+                        </span>
+                    </div>
+                    <div id="playerCards-1" class="flex justify-center -space-x-8 sm:-space-x-10">
+                        <!-- Cards injected here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Player Info Bar -->
+            <div class="w-full max-w-md bg-slate-900/90 backdrop-blur rounded-2xl border border-slate-800 p-3 shadow-xl flex justify-between items-center mb-3">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-full bg-emerald-950 border border-emerald-500/50 flex items-center justify-center text-emerald-400">
+                        <i class="fa-solid fa-wallet"></i>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-slate-400 uppercase font-semibold">Bankroll</div>
+                        <div id="balanceDisplay" class="text-base sm:text-lg font-bold text-emerald-400">$1,000</div>
+                    </div>
+                </div>
+
+                <!-- Clear / Reset Bet Buttons when placing bets -->
+                <div id="bettingUtilityBtns" class="flex space-x-2">
+                    <button id="clearBetBtn" class="px-2.5 py-1 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+                        Clear
+                    </button>
+                    <button id="allInBtn" class="px-2.5 py-1 text-xs rounded-lg bg-amber-600/30 hover:bg-amber-600/50 text-amber-300 border border-amber-500/40 transition font-medium">
+                        All-In
+                    </button>
+                </div>
+            </div>
+
+            <!-- CONTROL PANELS -->
+            <!-- 1. Betting Chips Panel -->
+            <div id="chipContainer" class="w-full max-w-md flex justify-center items-center gap-2 sm:gap-4 py-2">
+                <button class="chip-btn chip w-11 h-11 sm:w-14 sm:h-14 bg-blue-700 border-blue-300 text-white text-xs sm:text-sm" data-value="10">$10</button>
+                <button class="chip-btn chip w-11 h-11 sm:w-14 sm:h-14 bg-emerald-700 border-emerald-300 text-white text-xs sm:text-sm" data-value="25">$25</button>
+                <button class="chip-btn chip w-11 h-11 sm:w-14 sm:h-14 bg-red-700 border-red-300 text-white text-xs sm:text-sm" data-value="50">$50</button>
+                <button class="chip-btn chip w-11 h-11 sm:w-14 sm:h-14 bg-purple-700 border-purple-300 text-white text-xs sm:text-sm" data-value="100">$100</button>
+                <button class="chip-btn chip w-11 h-11 sm:w-14 sm:h-14 bg-amber-500 border-yellow-200 text-slate-950 text-xs sm:text-sm" data-value="500">$500</button>
+            </div>
+
+            <!-- Action Buttons Panel (Hidden until Deal) -->
+            <div id="actionControls" class="w-full max-w-xl hidden grid-cols-2 sm:grid-cols-5 gap-2 pt-2">
+                <button id="hitBtn" class="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold py-2.5 px-3 rounded-xl shadow-lg border-b-4 border-emerald-800 transition flex items-center justify-center space-x-1">
+                    <i class="fa-solid fa-plus text-xs"></i>
+                    <span>HIT</span>
+                </button>
+                <button id="standBtn" class="bg-red-600 hover:bg-red-500 active:bg-red-700 text-white font-bold py-2.5 px-3 rounded-xl shadow-lg border-b-4 border-red-800 transition flex items-center justify-center space-x-1">
+                    <i class="fa-solid fa-hand text-xs"></i>
+                    <span>STAND</span>
+                </button>
+                <button id="doubleBtn" class="bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white font-bold py-2.5 px-3 rounded-xl shadow-lg border-b-4 border-amber-800 transition flex items-center justify-center space-x-1 disabled:opacity-40 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-angles-up text-xs"></i>
+                    <span>DOUBLE</span>
+                </button>
+                <button id="splitBtn" class="bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold py-2.5 px-3 rounded-xl shadow-lg border-b-4 border-indigo-800 transition flex items-center justify-center space-x-1 disabled:opacity-40 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-arrows-split-up-and-left text-xs"></i>
+                    <span>SPLIT</span>
+                </button>
+                <button id="surrenderBtn" class="col-span-2 sm:col-span-1 bg-slate-700 hover:bg-slate-600 active:bg-slate-800 text-slate-200 font-semibold py-2.5 px-3 rounded-xl shadow-lg border-b-4 border-slate-900 transition flex items-center justify-center space-x-1 disabled:opacity-40 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-flag text-xs"></i>
+                    <span>SURRENDER</span>
+                </button>
+            </div>
+
+            <!-- Primary Deal / Play Next Hand Button -->
+            <div id="mainDealWrapper" class="w-full max-w-md pt-2">
+                <button id="dealBtn" class="w-full bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-slate-950 font-extrabold text-base sm:text-lg py-3 rounded-xl shadow-xl shadow-amber-500/10 border-b-4 border-amber-700 transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-play"></i>
+                    <span id="dealBtnText">DEAL CARDS</span>
+                </button>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- STATS MODAL DRAWER -->
+    <div id="statsModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl transform scale-95 transition-transform duration-300" id="statsContent">
+            <div class="flex justify-between items-center mb-6 border-b border-slate-800 pb-3">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-chart-column text-amber-400 text-lg"></i>
+                    <h2 class="cinzel text-xl font-bold text-slate-100">Game Statistics</h2>
+                </div>
+                <button id="closeStatsBtn" class="text-slate-400 hover:text-slate-100 p-1">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/50">
+                    <span class="text-xs text-slate-400 block">Total Played</span>
+                    <span id="statHands" class="text-xl font-bold text-slate-100">0</span>
+                </div>
+                <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/50">
+                    <span class="text-xs text-slate-400 block">Win Rate</span>
+                    <span id="statWinRate" class="text-xl font-bold text-emerald-400">0%</span>
+                </div>
+                <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/50">
+                    <span class="text-xs text-slate-400 block">Wins</span>
+                    <span id="statWins" class="text-xl font-bold text-emerald-400">0</span>
+                </div>
+                <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/50">
+                    <span class="text-xs text-slate-400 block">Losses</span>
+                    <span id="statLosses" class="text-xl font-bold text-red-400">0</span>
+                </div>
+                <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/50">
+                    <span class="text-xs text-slate-400 block">Pushes (Draws)</span>
+                    <span id="statDraws" class="text-xl font-bold text-amber-400">0</span>
+                </div>
+                <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/50">
+                    <span class="text-xs text-slate-400 block">Blackjacks</span>
+                    <span id="statBlackjacks" class="text-xl font-bold text-amber-300">0</span>
+                </div>
+            </div>
+
+            <div class="bg-slate-800/40 p-3 rounded-xl border border-slate-700/30 flex justify-between items-center">
+                <span class="text-xs text-slate-400">Net Profit / Loss:</span>
+                <span id="statNetProfit" class="text-base font-bold text-slate-200">$0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT GAME LOGIC -->
+    <script>
+        // WEB AUDIO SYNTHESIZER FOR SFX
+        class SoundEffects {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playChipSound() {
+                if (!this.enabled) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1200, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(400, this.ctx.currentTime + 0.05);
+
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.05);
+            }
+
+            playCardSlide() {
+                if (!this.enabled) return;
+                this.init();
+                const bufferSize = this.ctx.sampleRate * 0.08;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(800, this.ctx.currentTime);
+                filter.Q.setValueAtTime(3, this.ctx.currentTime);
+
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                noise.start();
+            }
+
+            playWin() {
+                if (!this.enabled) return;
+                this.init();
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                notes.forEach((freq, index) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + index * 0.08);
+
+                    gain.gain.setValueAtTime(0, this.ctx.currentTime + index * 0.08);
+                    gain.gain.linearRampToValueAtTime(0.2, this.ctx.currentTime + index * 0.08 + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + index * 0.08 + 0.25);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + index * 0.08);
+                    osc.stop(this.ctx.currentTime + index * 0.08 + 0.25);
+                });
+            }
+
+            playLose() {
+                if (!this.enabled) return;
+                this.init();
+                const notes = [300, 260, 220, 180];
+                notes.forEach((freq, index) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + index * 0.1);
+
+                    gain.gain.setValueAtTime(0.15, this.ctx.currentTime + index * 0.1);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + index * 0.1 + 0.15);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + index * 0.1);
+                    osc.stop(this.ctx.currentTime + index * 0.1 + 0.15);
+                });
+            }
+        }
+
+        const sound = new SoundEffects();
+
+        // GAME ENGINE DECK & LOGIC
+        const SUITS = [
+            { name: 'hearts', symbol: '♥', color: 'text-red-600' },
+            { name: 'diamonds', symbol: '♦', color: 'text-red-600' },
+            { name: 'clubs', symbol: '♣', color: 'text-slate-900' },
+            { name: 'spades', symbol: '♠', color: 'text-slate-900' }
+        ];
+
+        const RANKS = [
+            { name: '2', val: 2 }, { name: '3', val: 3 }, { name: '4', val: 4 },
+            { name: '5', val: 5 }, { name: '6', val: 6 }, { name: '7', val: 7 },
+            { name: '8', val: 8 }, { name: '9', val: 9 }, { name: '10', val: 10 },
+            { name: 'J', val: 10 }, { name: 'Q', val: 10 }, { name: 'K', val: 10 },
+            { name: 'A', val: 11 }
+        ];
+
+        // AI Dealer Dialogues
+        const DIALOGUES = {
+            welcome: [
+                "Welcome to my table! Care to place a wager?",
+                "Ready for some high-stakes Blackjack? Place your chips!",
+                "Let's test your luck and strategy today. Place your bet."
+            ],
+            playerGoodStart: [
+                "Strong starting hand! What's your move?",
+                "Looking good over there. Will you Hit or Stand?",
+                "Nice cards! Let's see how you play them."
+            ],
+            playerBadStart: [
+                "Tough starting hand. Let's see if you can turn it around.",
+                "Tricky total. Hit or stand?",
+                "Every hand is a puzzle. Choose wisely!"
+            ],
+            playerBlackjack: [
+                "BLACKJACK! Outstanding deal!",
+                "Natural 21! You've got the luck today!",
+                "Pure perfection! Pure 21!"
+            ],
+            dealerBlackjack: [
+                "Blackjack for me! Better luck next round.",
+                "Looks like I got the Natural 21 this time!",
+                "Dealer has Blackjack! Unfortunate timing for you."
+            ],
+            playerBust: [
+                "Bust! Pushed a bit too far there.",
+                "Over 21! Luck wasn't on that card.",
+                "House wins this hand. Want to try again?"
+            ],
+            dealerBust: [
+                "I busted! You win this round!",
+                "Over 21 for the house! Great stand by you.",
+                "Card was too high for me! Congratulations!"
+            ],
+            playerWin: [
+                "You got me this time! Great hand.",
+                "Nice victory! Adding chips to your balance.",
+                "Well played! You beat the house."
+            ],
+            dealerWin: [
+                "House wins this round! Want to double down next time?",
+                "I take this one. Better luck on the next hand!",
+                "The odds favored me there. Keep trying!"
+            ],
+            push: [
+                "It's a push! Stakes returned.",
+                "Tie game! We mirror each other.",
+                "Dead heat! No winner this round."
+            ],
+            doubleDown: [
+                "Doubling down! Bold choice, one card incoming...",
+                "Raising the stakes! Let's see that final card.",
+                "High risk, high reward! Here it comes."
+            ],
+            split: [
+                "Splitting pairs! Double the action.",
+                "Two hands to play now. Let's focus on the first."
+            ]
+        };
+
+        // Game State Variables
+        let deck = [];
+        let balance = 1000;
+        let currentBet = 0;
+        let dealerHand = [];
+        let playerHands = [[]]; // Array of hands to support splitting
+        let currentHandIndex = 0;
+        let gameState = 'betting'; // 'betting', 'playerTurn', 'dealerTurn', 'gameOver'
+        let stats = {
+            hands: 0,
+            wins: 0,
+            losses: 0,
+            draws: 0,
+            blackjacks: 0,
+            startingBalance: 1000
+        };
+
+        // DOM Elements
+        const dealerCardsEl = document.getElementById('dealerCards');
+        const dealerScoreEl = document.getElementById('dealerScore');
+        const dealerScoreBadge = document.getElementById('dealerScoreBadge');
+        const dealerCommentary = document.getElementById('dealerCommentary');
+        
+        const playerCards0El = document.getElementById('playerCards-0');
+        const playerScore0El = document.getElementById('playerScore-0');
+        const playerScoreBadge0 = document.getElementById('playerScoreBadge-0');
+        
+        const hand1El = document.getElementById('hand-1');
+        const playerCards1El = document.getElementById('playerCards-1');
+        const playerScore1El = document.getElementById('playerScore-1');
+
+        const balanceDisplay = document.getElementById('balanceDisplay');
+        const currentBetDisplay = document.getElementById('currentBetDisplay');
+        
+        const chipContainer = document.getElementById('chipContainer');
+        const actionControls = document.getElementById('actionControls');
+        const mainDealWrapper = document.getElementById('mainDealWrapper');
+        const dealBtn = document.getElementById('dealBtn');
+        const dealBtnText = document.getElementById('dealBtnText');
+        const bettingUtilityBtns = document.getElementById('bettingUtilityBtns');
+
+        const hitBtn = document.getElementById('hitBtn');
+        const standBtn = document.getElementById('standBtn');
+        const doubleBtn = document.getElementById('doubleBtn');
+        const splitBtn = document.getElementById('splitBtn');
+        const surrenderBtn = document.getElementById('surrenderBtn');
+
+        const resultBanner = document.getElementById('resultBanner');
+        const resultBadge = document.getElementById('resultBadge');
+        const resultText = document.getElementById('resultText');
+
+        // Stats Elements
+        const statsModal = document.getElementById('statsModal');
+        const statsBtn = document.getElementById('statsBtn');
+        const closeStatsBtn = document.getElementById('closeStatsBtn');
+
+        // INITIALIZATION
+        function initGame() {
+            createDeck();
+            shuffleDeck();
+            updateUI();
+            setDealerCommentary(getRandomDialogue('welcome'));
+        }
+
+        // DECK CREATION & SHUFFLE (Using 6-deck shoe for realistic casino standards)
+        function createDeck() {
+            deck = [];
+            const numDecks = 6;
+            for (let d = 0; d < numDecks; d++) {
+                for (let suit of SUITS) {
+                    for (let rank of RANKS) {
+                        deck.push({ ...rank, suit, id: Math.random() });
+                    }
+                }
+            }
+        }
+
+        function shuffleDeck() {
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+        }
+
+        function drawCard() {
+            if (deck.length < 20) {
+                createDeck();
+                shuffleDeck();
+            }
+            return deck.pop();
+        }
+
+        // HAND CALCULATIONS
+        function calculateScore(hand) {
+            let score = 0;
+            let aces = 0;
+
+            for (let card of hand) {
+                score += card.val;
+                if (card.name === 'A') aces++;
+            }
+
+            while (score > 21 && aces > 0) {
+                score -= 10;
+                aces--;
+            }
+
+            return score;
+        }
+
+        function isBlackjack(hand) {
+            return hand.length === 2 && calculateScore(hand) === 21;
+        }
+
+        // AI COMMENTARY HELPER
+        function getRandomDialogue(type) {
+            const list = DIALOGUES[type];
+            return list[Math.floor(Math.random() * list.length)];
+        }
+
+        function setDealerCommentary(text) {
+            dealerCommentary.textContent = text;
+        }
+
+        // BETTING SYSTEM
+        function addBet(amount) {
+            if (gameState !== 'betting') return;
+            if (balance >= amount) {
+                balance -= amount;
+                currentBet += amount;
+                sound.playChipSound();
+                updateUI();
+            }
+        }
+
+        function clearBet() {
+            if (gameState !== 'betting') return;
+            balance += currentBet;
+            currentBet = 0;
+            sound.playChipSound();
+            updateUI();
+        }
+
+        function allIn() {
+            if (gameState !== 'betting' || balance <= 0) return;
+            currentBet += balance;
+            balance = 0;
+            sound.playChipSound();
+            updateUI();
+        }
+
+        // START DEALING
+        function startDeal() {
+            if (currentBet <= 0) {
+                setDealerCommentary("Please place a bet before dealing!");
+                return;
+            }
+
+            gameState = 'playerTurn';
+            sound.playCardSlide();
+
+            // Reset hands
+            dealerHand = [drawCard(), drawCard()];
+            playerHands = [[drawCard(), drawCard()]];
+            currentHandIndex = 0;
+
+            // UI Adjustments
+            resultBanner.classList.add('hidden', 'scale-95', 'opacity-0');
+            chipContainer.classList.add('hidden');
+            bettingUtilityBtns.classList.add('hidden');
+            mainDealWrapper.classList.add('hidden');
+            actionControls.classList.remove('hidden');
+            actionControls.classList.add('grid');
+            hand1El.classList.add('hidden');
+
+            renderHands(false);
+            updateUI();
+
+            // Check Immediate Natural Blackjacks
+            const playerBJ = isBlackjack(playerHands[0]);
+            const dealerBJ = isBlackjack(dealerHand);
+
+            if (playerBJ || dealerBJ) {
+                setTimeout(() => handleBlackjackState(playerBJ, dealerBJ), 600);
+            } else {
+                const score = calculateScore(playerHands[0]);
+                if (score >= 18) {
+                    setDealerCommentary(getRandomDialogue('playerGoodStart'));
+                } else {
+                    setDealerCommentary(getRandomDialogue('playerBadStart'));
+                }
+            }
+        }
+
+        function handleBlackjackState(playerBJ, dealerBJ) {
+            renderHands(true);
+            gameState = 'gameOver';
+
+            if (playerBJ && dealerBJ) {
+                balance += currentBet;
+                setDealerCommentary("Both of us have Blackjack! It's a push.");
+                showResult("PUSH / DRAW", "bg-amber-600/90", "text-amber-100", "border-amber-400");
+                stats.draws++;
+                stats.blackjacks++;
+            } else if (playerBJ) {
+                const winAmount = Math.floor(currentBet * 2.5);
+                balance += winAmount;
+                setDealerCommentary(getRandomDialogue('playerBlackjack'));
+                showResult("BLACKJACK! (3:2)", "bg-emerald-600/90", "text-emerald-100", "border-emerald-400");
+                sound.playWin();
+                stats.wins++;
+                stats.blackjacks++;
+            } else {
+                setDealerCommentary(getRandomDialogue('dealerBlackjack'));
+                showResult("DEALER BLACKJACK", "bg-red-700/90", "text-red-100", "border-red-500");
+                sound.playLose();
+                stats.losses++;
+            }
+
+            stats.hands++;
+            finishRoundUI();
+        }
+
+        // PLAYER ACTIONS
+        function hit() {
+            if (gameState !== 'playerTurn') return;
+
+            sound.playCardSlide();
+            const currentHand = playerHands[currentHandIndex];
+            currentHand.push(drawCard());
+            renderHands(false);
+
+            const score = calculateScore(currentHand);
+            if (score > 21) {
+                // Hand busted
+                if (playerHands.length > 1 && currentHandIndex === 0) {
+                    // Advance to next hand if split
+                    currentHandIndex = 1;
+                    setDealerCommentary("First hand busted! Playing second hand...");
+                    renderHands(false);
+                } else {
+                    endPlayerTurn();
+                }
+            } else if (score === 21) {
+                stand();
+            } else {
+                // Disable double/split after hit
+                doubleBtn.disabled = true;
+                splitBtn.disabled = true;
+                surrenderBtn.disabled = true;
+            }
+        }
+
+        function stand() {
+            if (gameState !== 'playerTurn') return;
+
+            if (playerHands.length > 1 && currentHandIndex === 0) {
+                currentHandIndex = 1;
+                setDealerCommentary("Standing on first hand. Playing second split hand.");
+                renderHands(false);
+            } else {
+                endPlayerTurn();
+            }
+        }
+
+        function doubleDown() {
+            if (gameState !== 'playerTurn') return;
+            if (balance < currentBet) {
+                setDealerCommentary("Not enough bankroll to double down!");
+                return;
+            }
+
+            balance -= currentBet;
+            currentBet *= 2;
+            sound.playCardSlide();
+            setDealerCommentary(getRandomDialogue('doubleDown'));
+
+            playerHands[currentHandIndex].push(drawCard());
+            renderHands(false);
+
+            setTimeout(() => {
+                endPlayerTurn();
+            }, 600);
+        }
+
+        function split() {
+            if (gameState !== 'playerTurn') return;
+            const hand = playerHands[0];
+            if (hand.length !== 2 || hand[0].name !== hand[1].name) return;
+            if (balance < currentBet) {
+                setDealerCommentary("Not enough bankroll to split!");
+                return;
+            }
+
+            balance -= currentBet;
+            currentBet *= 2; // Total bet doubles across 2 hands
+            sound.playChipSound();
+
+            playerHands = [
+                [hand[0], drawCard()],
+                [hand[1], drawCard()]
+            ];
+
+            hand1El.classList.remove('hidden');
+            setDealerCommentary(getRandomDialogue('split'));
+            renderHands(false);
+            updateUI();
+        }
+
+        function surrender() {
+            if (gameState !== 'playerTurn') return;
+            gameState = 'gameOver';
+
+            const refund = Math.floor(currentBet / 2);
+            balance += refund;
+            setDealerCommentary("You surrendered. Half your bet was returned.");
+
+            showResult("SURRENDERED", "bg-slate-700/90", "text-slate-200", "border-slate-500");
+            stats.losses++;
+            stats.hands++;
+            finishRoundUI();
+        }
+
+        // DEALER AI TURN
+        function endPlayerTurn() {
+            gameState = 'dealerTurn';
+            renderHands(true);
+
+            // Check if all player hands busted
+            const allBusted = playerHands.every(h => calculateScore(h) > 21);
+
+            if (allBusted) {
+                setDealerCommentary(getRandomDialogue('playerBust'));
+                showResult("BUST! HOUSE WINS", "bg-red-700/90", "text-red-100", "border-red-500");
+                sound.playLose();
+                stats.losses++;
+                stats.hands++;
+                finishRoundUI();
+                return;
+            }
+
+            // Dealer hits on soft 17 rule
+            const dealerPlayInterval = setInterval(() => {
+                let dealerScore = calculateScore(dealerHand);
+                if (dealerScore < 17) {
+                    sound.playCardSlide();
+                    dealerHand.push(drawCard());
+                    renderHands(true);
+                } else {
+                    clearInterval(dealerPlayInterval);
+                    evaluateWinner();
+                }
+            }, 700);
+        }
+
+        // WINNER EVALUATION
+        function evaluateWinner() {
+            gameState = 'gameOver';
+            const dealerScore = calculateScore(dealerHand);
+            let totalWinAmount = 0;
+            let results = [];
+
+            const perHandBet = playerHands.length > 1 ? currentBet / 2 : currentBet;
+
+            playerHands.forEach((hand, idx) => {
+                const pScore = calculateScore(hand);
+
+                if (pScore > 21) {
+                    results.push('loss');
+                } else if (dealerScore > 21) {
+                    totalWinAmount += perHandBet * 2;
+                    results.push('win');
+                } else if (pScore > dealerScore) {
+                    totalWinAmount += perHandBet * 2;
+                    results.push('win');
+                } else if (pScore < dealerScore) {
+                    results.push('loss');
+                } else {
+                    totalWinAmount += perHandBet;
+                    results.push('push');
+                }
+            });
+
+            balance += totalWinAmount;
+
+            // Stats & Commentary update
+            const hasWin = results.includes('win');
+            const hasLoss = results.includes('loss');
+            const hasPush = results.includes('push');
+
+            if (dealerScore > 21) {
+                setDealerCommentary(getRandomDialogue('dealerBust'));
+                showResult("DEALER BUST! YOU WIN", "bg-emerald-600/90", "text-emerald-100", "border-emerald-400");
+                sound.playWin();
+                stats.wins++;
+            } else if (hasWin && !hasLoss) {
+                setDealerCommentary(getRandomDialogue('playerWin'));
+                showResult("YOU WIN!", "bg-emerald-600/90", "text-emerald-100", "border-emerald-400");
+                sound.playWin();
+                stats.wins++;
+            } else if (hasLoss && !hasWin) {
+                setDealerCommentary(getRandomDialogue('dealerWin'));
+                showResult("DEALER WINS", "bg-red-700/90", "text-red-100", "border-red-500");
+                sound.playLose();
+                stats.losses++;
+            } else {
+                setDealerCommentary(getRandomDialogue('push'));
+                showResult("PUSH / DRAW", "bg-amber-600/90", "text-amber-100", "border-amber-400");
+                stats.draws++;
+            }
+
+            stats.hands++;
+            finishRoundUI();
+        }
+
+        function finishRoundUI() {
+            updateUI();
+            actionControls.classList.add('hidden');
+            actionControls.classList.remove('grid');
+            mainDealWrapper.classList.remove('hidden');
+            dealBtnText.textContent = "PLAY NEXT HAND";
+
+            if (balance <= 0) {
+                setTimeout(() => {
+                    setDealerCommentary("You're out of chips! Click reset in top right to re-up your bankroll.");
+                }, 1200);
+            }
+        }
+
+        function showResult(text, bgClass, textClass, borderClass) {
+            resultBadge.className = `px-6 py-2 rounded-2xl font-black text-base sm:text-xl tracking-widest uppercase shadow-2xl border ${bgClass} ${textClass} ${borderClass}`;
+            resultText.textContent = text;
+            resultBanner.classList.remove('hidden');
+            setTimeout(() => {
+                resultBanner.classList.remove('scale-95', 'opacity-0');
+                resultBanner.classList.add('scale-100', 'opacity-100');
+            }, 50);
+        }
+
+        // RENDERING CARDS & HANDS
+        function renderHands(showDealerHiddenCard) {
+            // Render Dealer Hand
+            dealerCardsEl.innerHTML = '';
+            dealerHand.forEach((card, index) => {
+                const isHidden = index === 1 && !showDealerHiddenCard;
+                dealerCardsEl.appendChild(createCardElement(card, isHidden, index));
+            });
+
+            if (showDealerHiddenCard) {
+                dealerScoreEl.textContent = calculateScore(dealerHand);
+                dealerScoreBadge.classList.remove('hidden');
+            } else {
+                dealerScoreEl.textContent = dealerHand[0] ? dealerHand[0].val : 0;
+                dealerScoreBadge.classList.remove('hidden');
+            }
+
+            // Render Player Hands
+            playerHands.forEach((hand, handIdx) => {
+                const container = handIdx === 0 ? playerCards0El : playerCards1El;
+                const scoreEl = handIdx === 0 ? playerScore0El : playerScore1El;
+                const badgeEl = handIdx === 0 ? playerScoreBadge0 : document.getElementById('playerScoreBadge-1');
+                const wrapper = document.getElementById(`hand-${handIdx}`);
+
+                container.innerHTML = '';
+                hand.forEach((card, cardIdx) => {
+                    container.appendChild(createCardElement(card, false, cardIdx));
+                });
+
+                scoreEl.textContent = calculateScore(hand);
+                badgeEl.classList.remove('hidden');
+
+                // Highlight active split hand
+                if (playerHands.length > 1 && gameState === 'playerTurn') {
+                    if (handIdx === currentHandIndex) {
+                        wrapper.classList.add('border-amber-400/50', 'bg-slate-900/40');
+                        wrapper.classList.remove('border-transparent');
+                    } else {
+                        wrapper.classList.remove('border-amber-400/50', 'bg-slate-900/40');
+                        wrapper.classList.add('border-transparent');
+                    }
+                } else {
+                    wrapper.classList.remove('border-amber-400/50', 'bg-slate-900/40');
+                    wrapper.classList.add('border-transparent');
+                }
+            });
+        }
+
+        function createCardElement(card, isHidden, index) {
+            const container = document.createElement('div');
+            container.className = `card-container animate-deal`;
+            container.style.animationDelay = `${index * 0.1}s`;
+
+            const inner = document.createElement('div');
+            inner.className = `card-inner ${isHidden ? 'flipped' : ''}`;
+
+            // Card Front
+            const front = document.createElement('div');
+            front.className = `card-front ${card.suit.color}`;
+            front.innerHTML = `
+                <div class="flex justify-between items-start text-xs sm:text-sm font-bold leading-none">
+                    <span>${card.name}</span>
+                    <span>${card.suit.symbol}</span>
+                </div>
+                <div class="text-xl sm:text-3xl text-center font-bold">
+                    ${card.suit.symbol}
+                </div>
+                <div class="flex justify-between items-end text-xs sm:text-sm font-bold leading-none rotate-180">
+                    <span>${card.name}</span>
+                    <span>${card.suit.symbol}</span>
+                </div>
+            `;
+
+            // Card Back
+            const back = document.createElement('div');
+            back.className = 'card-back';
+            back.innerHTML = `
+                <div class="card-pattern">
+                    <i class="fa-solid fa-gem text-amber-400 text-lg opacity-80"></i>
+                </div>
+            `;
+
+            inner.appendChild(front);
+            inner.appendChild(back);
+            container.appendChild(inner);
+
+            return container;
+        }
+
+        // UI UPDATES & BUTTON STATE MANAGEMENT
+        function updateUI() {
+            balanceDisplay.textContent = `$${balance.toLocaleString()}`;
+            currentBetDisplay.textContent = `$${currentBet.toLocaleString()}`;
+
+            if (gameState === 'betting' || gameState === 'gameOver') {
+                chipContainer.classList.remove('hidden');
+                bettingUtilityBtns.classList.remove('hidden');
+                mainDealWrapper.classList.remove('hidden');
+                actionControls.classList.add('hidden');
+                actionControls.classList.remove('grid');
+
+                if (gameState === 'gameOver') {
+                    dealBtnText.textContent = "PLAY NEXT HAND";
+                } else {
+                    dealBtnText.textContent = "DEAL CARDS";
+                }
+            }
+
+            // Action button rules
+            if (gameState === 'playerTurn') {
+                const currentHand = playerHands[currentHandIndex];
+                
+                // Can double on first 2 cards of hand if balance permits
+                doubleBtn.disabled = currentHand.length !== 2 || balance < (playerHands.length > 1 ? currentBet / 2 : currentBet);
+                
+                // Can split if first hand has 2 identical rank cards
+                splitBtn.disabled = playerHands.length > 1 || currentHand.length !== 2 || currentHand[0].name !== currentHand[1].name || balance < currentBet;
+                
+                // Surrender only on initial 2 cards
+                surrenderBtn.disabled = currentHand.length !== 2 || playerHands.length > 1;
+            }
+
+            updateStatsDisplay();
+        }
+
+        function updateStatsDisplay() {
+            document.getElementById('statHands').textContent = stats.hands;
+            document.getElementById('statWins').textContent = stats.wins;
+            document.getElementById('statLosses').textContent = stats.losses;
+            document.getElementById('statDraws').textContent = stats.draws;
+            document.getElementById('statBlackjacks').textContent = stats.blackjacks;
+
+            const winRate = stats.hands > 0 ? Math.round((stats.wins / stats.hands) * 100) : 0;
+            document.getElementById('statWinRate').textContent = `${winRate}%`;
+
+            const netProfit = balance - stats.startingBalance;
+            const netProfitEl = document.getElementById('statNetProfit');
+            netProfitEl.textContent = `${netProfit >= 0 ? '+' : ''}$${netProfit.toLocaleString()}`;
+            netProfitEl.className = `text-base font-bold ${netProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
+        }
+
+        // EVENT LISTENERS
+        document.querySelectorAll('.chip-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const val = parseInt(btn.getAttribute('data-value'));
+                addBet(val);
+            });
+        });
+
+        document.getElementById('clearBetBtn').addEventListener('click', clearBet);
+        document.getElementById('allInBtn').addEventListener('click', allIn);
+
+        dealBtn.addEventListener('click', () => {
+            if (gameState === 'gameOver') {
+                gameState = 'betting';
+                currentBet = 0;
+                dealerHand = [];
+                playerHands = [[]];
+                dealerCardsEl.innerHTML = '';
+                playerCards0El.innerHTML = '';
+                playerCards1El.innerHTML = '';
+                dealerScoreBadge.classList.add('hidden');
+                playerScoreBadge0.classList.add('hidden');
+                document.getElementById('playerScoreBadge-1').classList.add('hidden');
+                resultBanner.classList.add('hidden', 'scale-95', 'opacity-0');
+                hand1El.classList.add('hidden');
+                setDealerCommentary(getRandomDialogue('welcome'));
+                updateUI();
+            } else if (gameState === 'betting') {
+                startDeal();
+            }
+        });
+
+        hitBtn.addEventListener('click', hit);
+        standBtn.addEventListener('click', stand);
+        doubleBtn.addEventListener('click', doubleDown);
+        splitBtn.addEventListener('click', split);
+        surrenderBtn.addEventListener('click', surrender);
+
+        // Sound Toggle
+        document.getElementById('soundToggle').addEventListener('click', () => {
+            sound.enabled = !sound.enabled;
+            const icon = document.getElementById('soundIcon');
+            if (sound.enabled) {
+                icon.className = 'fa-solid fa-volume-high text-sm sm:text-base text-amber-400';
+            } else {
+                icon.className = 'fa-solid fa-volume-xmark text-sm sm:text-base text-slate-500';
+            }
+        });
+
+        // Bankroll Reset
+        document.getElementById('resetBankBtn').addEventListener('click', () => {
+            if (gameState !== 'playerTurn' && gameState !== 'dealerTurn') {
+                balance = 1000;
+                currentBet = 0;
+                gameState = 'betting';
+                setDealerCommentary("Bankroll refilled to $1,000! Ready to play.");
+                updateUI();
+            }
+        });
+
+        // Stats Modal Open/Close
+        statsBtn.addEventListener('click', () => {
+            statsModal.classList.remove('opacity-0', 'pointer-events-none');
+            document.getElementById('statsContent').classList.remove('scale-95');
+            document.getElementById('statsContent').classList.add('scale-100');
+        });
+
+        closeStatsBtn.addEventListener('click', () => {
+            statsModal.classList.add('opacity-0', 'pointer-events-none');
+            document.getElementById('statsContent').classList.add('scale-95');
+            document.getElementById('statsContent').classList.remove('scale-100');
+        });
+
+        // Initialize on load
+        window.onload = initGame;
+    </script>
+</body>
+</html>
